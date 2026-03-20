@@ -1,5 +1,7 @@
 # md·studio
 
+[Live Link](https://rajmahadev422.github.io/md-studio/)
+
 A zero-dependency, single-file Markdown editor and converter. Open `index.html` in any browser — no server, no install, no build step.
 
 ---
