@@ -44,7 +44,6 @@ html {
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
   background: var(--paper);
   color: var(--ink);
   height: 100vh;
@@ -452,7 +451,6 @@ textarea::placeholder {
 .prose h4,
 .prose h5,
 .prose h6 {
-  font-family: 'Fraunces', serif;
   font-weight: 700;
   line-height: 1.2;
   margin-top: 2em;
@@ -462,10 +460,12 @@ textarea::placeholder {
 
 .prose h1 {
   font-size: 2rem;
+  font-family: 'Fraunces', serif;
 }
 
 .prose h2 {
   font-size: 1.5rem;
+  font-family: 'Fraunces', serif;
 }
 
 .prose h3 {
