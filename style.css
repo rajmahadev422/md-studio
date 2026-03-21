@@ -745,7 +745,7 @@ textarea::placeholder {
 /* ══ TOAST ══ */
 .toast {
   position: fixed;
-  bottom: 1.5rem;
+  top: 3.5rem;
   right: 1.5rem;
   background: var(--ink);
   color: var(--paper);

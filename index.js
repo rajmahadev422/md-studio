@@ -1,3 +1,7 @@
+const download = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v8M5 8l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Download
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 // ══ MARKED ══
 const renderer = new marked.Renderer();
 renderer.code = (code, lang) => {
@@ -410,19 +414,22 @@ function getSource() {
   ).value;
 }
 
-function downloadFile(format) {
+async function downloadFile(format) {
   closeDropdown();
   const src = getSource().trim();
   if (!src) {
     showToast("Nothing to download — add content first");
     return;
   }
+  showDownload("Downloading…", true);
   if (format === "pdf") {
-    downloadPDF(src);
+    await downloadPDF(src);
+    showDownload(download, false);
     return;
   }
   if (format === "html") {
-    downloadHTML(src);
+    await downloadHTML(src);
+    showDownload(download, false);
     return;
   }
   const blob = new Blob([src], { type: "text/plain" });
@@ -476,7 +483,7 @@ async function imgToDataURL(img) {
 
 function applyPDFStyles(el) {
   el.style.cssText =
-    "font-family:Georgia,serif;font-size:13px;line-height:1.75;color:#1a1614;max-width:640px;padding:0 8px;";
+    "font-size:13px;line-height:1.75;color:#1a1614;max-width:640px;padding:0 8px;";
   el.querySelectorAll("h1").forEach(
     (e) =>
       (e.style.cssText =
@@ -489,8 +496,7 @@ function applyPDFStyles(el) {
   );
   el.querySelectorAll("h3").forEach(
     (e) =>
-      (e.style.cssText =
-        "font-size:16px;font-weight:700;margin:14px 0 6px;font-family:Georgia,serif;"),
+      (e.style.cssText = "font-size:16px;font-weight:700;margin:14px 0 6px;"),
   );
   el.querySelectorAll("p").forEach((e) => (e.style.marginBottom = "12px"));
   el.querySelectorAll(":not(pre) > code").forEach(
@@ -540,12 +546,14 @@ function applyPDFStyles(el) {
 
 async function downloadPDF(src) {
   showToast("Preparing images…");
+
   const tmp = document.createElement("div");
   tmp.innerHTML = marked.parse(src);
   tmp.querySelectorAll("pre code").forEach((el) => hljs.highlightElement(el));
   await Promise.all(Array.from(tmp.querySelectorAll("img")).map(imgToDataURL));
   applyPDFStyles(tmp);
   showToast("Generating PDF…");
+
   html2pdf()
     .set({
       margin: [14, 16, 14, 16],
@@ -615,8 +623,14 @@ function showToast(msg) {
   tt = setTimeout(() => t.classList.remove("show"), 3000);
 }
 
-// ══ INIT ══
-window.onload = () => { 
-applyTheme(currentTheme);
-loadSample();
+function showDownload(msg, d) {
+  document.getElementById("download-btn").innerHTML = msg;
+  document.getElementById("download-btn").disabled = d || false;
 }
+
+// ══ INIT ══
+window.onload = () => {
+  applyTheme(currentTheme);
+  loadSample();
+  showDownload(download, false);
+};
