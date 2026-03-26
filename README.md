@@ -139,7 +139,9 @@ All loaded from CDN — no `npm install` required.
 
 ```plaintext
 md-studio/
-└── index.html     # The entire application — HTML, CSS, and JS in one file
+└── index.html    # The entire application — HTML, CSS, and JS in one file
+└── index.js
+└── style.css 
 ```
 
 Everything is self-contained in `index.html`. There are no build tools, no config files, and no external assets beyond the CDN links.
