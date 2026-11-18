@@ -16,6 +16,7 @@ A zero-dependency, single-file Markdown editor and converter. Open `index.html` 
 | **File Upload** | Upload button accepts `.md`, `.txt`, `.markdown` |
 | **Four Export Formats** | PDF, Markdown (`.md`), Plain Text (`.txt`), HTML page |
 | **Image Support** | External image URLs embedded into PDF via CORS proxy fallback |
+| **Math Equations** | LaTeX rendered with KaTeX: `\(…\)`, `\\(…\\)`, `\[…\]`, `$$…$$`, `$…$` |
 | **Syntax Highlighting** | Fenced code blocks highlighted with Highlight.js |
 | **Keyboard Shortcuts** | `Ctrl+B`, `Ctrl+I`, `Ctrl+K` in Write mode |
 
@@ -104,6 +105,7 @@ Standard [CommonMark](https://commonmark.org/) plus GitHub Flavored Markdown (GF
 - Links and images
 - Tables
 - Horizontal rules
+- Math: inline `\(x^2\)` or `$x^2$`, display `\[ … \]` or `$$ … $$` (the doubled-backslash form `\\( … \\)` also works; math inside code spans/blocks is left alone)
 - Hard line breaks
 
 ---
@@ -128,8 +130,9 @@ All loaded from CDN — no `npm install` required.
 | --- | --- | --- |
 | [marked](https://marked.js.org/) | 9.1.6 | Markdown → HTML parser |
 | [highlight.js](https://highlightjs.org/) | 11.9.0 | Syntax highlighting |
+| [KaTeX](https://katex.org/) | 0.16.9 | Math typesetting |
 | [html2pdf.js](https://ekoopmans.github.io/html2pdf.js/) | 0.10.1 | PDF generation |
-| [Google Fonts](https://fonts.google.com/) | — | Fraunces, DM Sans, DM Mono |
+| [Google Fonts](https://fonts.google.com/) | — | Source Serif 4, Instrument Sans, JetBrains Mono |
 
 ---
 

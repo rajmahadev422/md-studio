@@ -1,5 +1,5 @@
 const download = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v8M5 8l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        Download
+        <span class="lbl">Download</span>
         <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 // ══ MARKED ══
@@ -12,6 +12,44 @@ renderer.code = (code, lang) => {
   return `<pre><code class="hljs">${hl}</code></pre>`;
 };
 marked.setOptions({ renderer, breaks: true, gfm: true });
+
+// ══ MATH (KaTeX) ══
+// Supports \( … \), \[ … \], $$ … $$, $ … $ — and the doubled-backslash forms \\( … \\), \\[ … \\].
+// Code blocks and inline code are skipped so their contents are never touched.
+const MATH_RE =
+  /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)|\$\$([\s\S]+?)\$\$|\\{1,2}\[([\s\S]+?)\\{1,2}\]|\\{1,2}\(([\s\S]+?)\\{1,2}\)|(?<![\\$\w])\$(?![\s$])((?:\\.|[^$\\\n])+?)(?<![\s\\])\$(?![\d\w])/g;
+
+const escapeHtml = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function renderMarkdown(src, forPDF) {
+  const store = [];
+  const tok = (tex, display) => {
+    let out;
+    try {
+      out = katex.renderToString(tex.trim(), {
+        displayMode: display,
+        throwOnError: false,
+        strict: "ignore",
+        output: forPDF ? "html" : "htmlAndMathml",
+      });
+    } catch (e) {
+      out = `<code class="katex-error">${escapeHtml(tex)}</code>`;
+    }
+    store.push(display ? `<div class="math-display">${out}</div>` : out);
+    return `@@M${display ? "D" : "I"}${store.length - 1}@@`;
+  };
+  const text = src.replace(MATH_RE, (m, code, d1, d2, i1, i2) => {
+    if (code) return code;
+    if (d1 !== undefined) return "\n\n" + tok(d1, true) + "\n\n";
+    if (d2 !== undefined) return "\n\n" + tok(d2, true) + "\n\n";
+    return tok(i1 !== undefined ? i1 : i2, false);
+  });
+  const html = marked
+    .parse(text)
+    .replace(/<p>\s*(@@MD\d+@@)\s*<\/p>/g, "$1");
+  return html.replace(/@@M[DI](\d+)@@/g, (_, i) => store[+i]);
+}
 
 // ══ STATE ══
 let currentMode = "convert";
@@ -31,6 +69,7 @@ Transform **Markdown** or plain text into beautiful documents — then export as
 - 📁 **Drag & drop** a \`.md\` or \`.txt\` file onto the editor
 - ⬇️ **Four export formats** — PDF, .md, .txt, .html
 - ✏️ **Write mode** — distraction-free editor with toolbar
+- ∑ **Math equations** — LaTeX via KaTeX, e.g. \\(x^2 + y^2 = r^2\\)
 
 ---
 
@@ -70,6 +109,16 @@ console.log(greet('World')); // Hello, World!
 ### Inline
 
 **Bold**, *italic*, ~~strikethrough~~, \`inline code\`.
+
+### Math
+
+Inline: the economic order quantity is \\(EOQ=\\sqrt{\\frac{2C_oA}{C_iP^2}}\\), where \\(C_o\\) is the ordering cost and \\(A\\) the annual demand.
+
+Display, with \\[ … \\] or $$ … $$:
+
+\\[ \\bar{x} = \\frac{1}{n}\\sum_{i=1}^{n} x_i \\]
+
+$$\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}$$
 
 ---
 
@@ -191,7 +240,7 @@ function renderPreview() {
   }
   empty.style.display = "none";
   prev.style.display = "block";
-  prev.innerHTML = marked.parse(md);
+  prev.innerHTML = renderMarkdown(md);
 }
 
 // ══ WRITE ══
@@ -288,6 +337,23 @@ function fmtBlock(type) {
       "end",
     );
   else if (type === "hr") ta.setRangeText("\n\n---\n\n", s, e, "end");
+  ta.focus();
+  onWriteInput();
+}
+
+function fmtMath(display) {
+  const ta = wta(),
+    s = ta.selectionStart,
+    e = ta.selectionEnd,
+    sel = ta.value.slice(s, e);
+  ta.setRangeText(
+    display
+      ? "\n\\[\n" + (sel || "E = mc^2") + "\n\\]\n"
+      : "\\(" + (sel || "x^2") + "\\)",
+    s,
+    e,
+    "end",
+  );
   ta.focus();
   onWriteInput();
 }
@@ -475,7 +541,7 @@ async function imgToDataURL(img) {
   } else {
     const ph = document.createElement("div");
     ph.style.cssText =
-      "background:#f3efe7;border:1px solid #ddd8cf;border-radius:6px;padding:8px 12px;font-size:11px;color:#8a8279;font-family:monospace;margin:8px 0;word-break:break-all;";
+      "background:#f1f4f8;border:1px solid #d8dee8;border-radius:6px;padding:8px 12px;font-size:11px;color:#66718a;font-family:monospace;margin:8px 0;word-break:break-all;";
     ph.textContent = "⚠ Image not embedded (CORS blocked): " + src;
     img.replaceWith(ph);
   }
@@ -483,7 +549,7 @@ async function imgToDataURL(img) {
 
 function applyPDFStyles(el) {
   el.style.cssText =
-    "font-size:13px;line-height:1.75;color:#1a1614;max-width:640px;padding:0 8px;";
+    "font-size:13px;line-height:1.75;color:#172033;max-width:640px;padding:0 8px;";
   el.querySelectorAll("h1").forEach(
     (e) =>
       (e.style.cssText =
@@ -502,22 +568,22 @@ function applyPDFStyles(el) {
   el.querySelectorAll(":not(pre) > code").forEach(
     (e) =>
       (e.style.cssText =
-        "font-family:monospace;font-size:11px;background:#f3efe7;padding:1px 5px;border-radius:3px;"),
+        "font-family:monospace;font-size:11px;background:#f1f4f8;padding:1px 5px;border-radius:3px;"),
   );
   el.querySelectorAll("pre").forEach(
     (e) =>
       (e.style.cssText =
-        "background:#1e1c1a;color:#e8e4df;padding:12px 14px;border-radius:6px;margin:12px 0;overflow:hidden;"),
+        "background:#0f1420;color:#e3e8f2;padding:12px 14px;border-radius:6px;margin:12px 0;overflow:hidden;"),
   );
   el.querySelectorAll("pre code").forEach(
     (e) =>
       (e.style.cssText =
-        "font-family:monospace;font-size:11px;color:#e8e4df;background:none;border:none;padding:0;line-height:1.65;"),
+        "font-family:monospace;font-size:11px;color:#e3e8f2;background:none;border:none;padding:0;line-height:1.65;"),
   );
   el.querySelectorAll("blockquote").forEach(
     (e) =>
       (e.style.cssText =
-        "border-left:3px solid #c8512a;padding:8px 14px;margin:12px 0;color:#8a8279;background:#f3efe7;"),
+        "border-left:3px solid #2a52be;padding:8px 14px;margin:12px 0;color:#66718a;background:#f1f4f8;"),
   );
   el.querySelectorAll("table").forEach(
     (e) =>
@@ -527,15 +593,18 @@ function applyPDFStyles(el) {
   el.querySelectorAll("th,td").forEach(
     (e) =>
       (e.style.cssText =
-        "padding:6px 10px;border:1px solid #ddd8cf;text-align:left;"),
+        "padding:6px 10px;border:1px solid #d8dee8;text-align:left;"),
   );
   el.querySelectorAll("hr").forEach(
     (e) =>
       (e.style.cssText =
-        "border:none;border-top:1px solid #ddd8cf;margin:18px 0;"),
+        "border:none;border-top:1px solid #d8dee8;margin:18px 0;"),
   );
   el.querySelectorAll("ul,ol").forEach(
     (e) => (e.style.cssText = "padding-left:20px;margin-bottom:12px;"),
+  );
+  el.querySelectorAll(".math-display").forEach(
+    (e) => (e.style.cssText = "margin:14px 0;text-align:center;overflow:hidden;"),
   );
   el.querySelectorAll("img").forEach(
     (e) =>
@@ -546,9 +615,14 @@ function applyPDFStyles(el) {
 
 async function downloadPDF(src) {
   showToast("Preparing images…");
+  await Promise.all(
+    ["KaTeX_Main", "KaTeX_Math", "KaTeX_Size1", "KaTeX_Size2", "KaTeX_AMS"].map((f) =>
+      document.fonts.load(`16px ${f}`).catch(() => {}),
+    ),
+  );
 
   const tmp = document.createElement("div");
-  tmp.innerHTML = marked.parse(src);
+  tmp.innerHTML = renderMarkdown(src, true);
   tmp.querySelectorAll("pre code").forEach((el) => hljs.highlightElement(el));
   await Promise.all(Array.from(tmp.querySelectorAll("img")).map(imgToDataURL));
   applyPDFStyles(tmp);
@@ -576,7 +650,7 @@ async function downloadPDF(src) {
 
 function downloadHTML(src) {
   const title = document.getElementById("filenameInput").value || "Document";
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title><link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600;700&family=DM+Mono:wght@400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/><style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:#faf8f4;color:#1a1614;padding:3rem 1.5rem;line-height:1.8}.prose{max-width:680px;margin:0 auto}.prose h1,.prose h2,.prose h3,.prose h4{font-family:'Fraunces',serif;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin-top:1.8em;margin-bottom:0.5em}.prose h1{font-size:2rem}.prose h2{font-size:1.5rem}.prose h3{font-size:1.15rem}.prose p{margin-bottom:1.2em}.prose a{color:#c8512a}.prose strong{font-weight:600}.prose em{font-style:italic}.prose ul,.prose ol{padding-left:1.6em;margin-bottom:1.2em}.prose blockquote{border-left:3px solid #c8512a;padding:.65rem 1.1rem;margin:1.3em 0;background:#f3efe7;border-radius:0 6px 6px 0;color:#8a8279;font-style:italic}.prose code{font-family:'DM Mono',monospace;font-size:.82em;background:#f3efe7;border:1px solid #ddd8cf;padding:.1em .4em;border-radius:4px}.prose pre{background:#1e1c1a;border-radius:10px;padding:1.15rem 1.35rem;overflow-x:auto;margin:1.3em 0}.prose pre code{background:none;border:none;padding:0;font-size:.79rem;color:#e8e4df;line-height:1.7}.prose table{width:100%;border-collapse:collapse;margin:1.3em 0;font-size:.88rem}.prose thead{background:#f3efe7}.prose th,.prose td{padding:.58rem .9rem;border:1px solid #ddd8cf;text-align:left}.prose th{font-weight:600}.prose hr{border:none;border-top:1px solid #ddd8cf;margin:2em 0}.prose img{max-width:100%;border-radius:8px;margin:1em 0}</style></head><body><div class="prose">${marked.parse(src)}</div></body></html>`;
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"/><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=JetBrains+Mono:wght@400&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/><style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:'Source Serif 4',Georgia,serif;background:#fbfcfe;color:#172033;padding:3rem 1.5rem;line-height:1.8}.prose{max-width:680px;margin:0 auto}.prose h1,.prose h2,.prose h3,.prose h4{font-family:'Source Serif 4',serif;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin-top:1.8em;margin-bottom:0.5em}.prose h1{font-size:2rem}.prose h2{font-size:1.5rem}.prose h3{font-size:1.15rem}.prose p{margin-bottom:1.2em}.prose a{color:#2a52be}.prose strong{font-weight:600}.prose em{font-style:italic}.prose ul,.prose ol{padding-left:1.6em;margin-bottom:1.2em}.prose blockquote{border-left:3px solid #2a52be;padding:.65rem 1.1rem;margin:1.3em 0;background:#f1f4f8;border-radius:0 6px 6px 0;color:#66718a;font-style:italic}.prose code{font-family:'JetBrains Mono',monospace;font-size:.82em;background:#f1f4f8;border:1px solid #d8dee8;padding:.1em .4em;border-radius:4px}.prose pre{background:#0f1420;border-radius:10px;padding:1.15rem 1.35rem;overflow-x:auto;margin:1.3em 0}.prose pre code{background:none;border:none;padding:0;font-size:.79rem;color:#e3e8f2;line-height:1.7}.prose table{width:100%;border-collapse:collapse;margin:1.3em 0;font-size:.88rem}.prose thead{background:#f1f4f8}.prose th,.prose td{padding:.58rem .9rem;border:1px solid #d8dee8;text-align:left}.prose th{font-weight:600}.prose hr{border:none;border-top:1px solid #d8dee8;margin:2em 0}.prose img{max-width:100%;border-radius:8px;margin:1em 0}.math-display{margin:1.4em 0;overflow-x:auto;overflow-y:hidden}.math-display .katex-display{margin:0}</style></head><body><div class="prose">${renderMarkdown(src)}</div></body></html>`;
   const blob = new Blob([html], { type: "text/html" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
