@@ -886,3 +886,23 @@ textarea::placeholder { color: var(--muted); opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* ══ PRINT / SAVE AS PDF ══ */
+#printRoot { display: none; }
+@page { size: A4; margin: 16mm; }
+@media print {
+  header, .app-body, .toast { display: none !important; }
+  html, body { height: auto !important; overflow: visible !important; display: block !important; background: #fff !important; }
+  #printRoot {
+    display: block;
+    --ink: #172033; --cream: #f1f4f8; --border: #d8dee8; --accent: #2a52be; --accent-soft: #eef2fc; --muted: #66718a;
+    --surface: #fff; --pre-bg: #0f1420; --pre-fg: #e3e8f2;
+    max-width: none; padding: 0; margin: 0; border: none; border-radius: 0; box-shadow: none; background: #fff; color: #172033;
+    font-size: 11pt; line-height: 1.65;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  #printRoot h1, #printRoot h2, #printRoot h3, #printRoot h4 { break-after: avoid; }
+  #printRoot pre, #printRoot table, #printRoot img, #printRoot blockquote, #printRoot .math-display { break-inside: avoid; }
+  #printRoot pre { white-space: pre-wrap; word-break: break-word; }
+  #printRoot a { color: var(--accent); }
+}

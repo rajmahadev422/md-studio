@@ -15,7 +15,7 @@ A zero-dependency, single-file Markdown editor and converter. Open `index.html` 
 | **Drag & Drop** | Drop a `.md` or `.txt` file directly onto the editor |
 | **File Upload** | Upload button accepts `.md`, `.txt`, `.markdown` |
 | **Four Export Formats** | PDF, Markdown (`.md`), Plain Text (`.txt`), HTML page |
-| **Image Support** | External image URLs embedded into PDF via CORS proxy fallback |
+| **Image Support** | Images render in the preview, HTML export and printed PDF |
 | **Math Equations** | LaTeX rendered with KaTeX: `\(…\)`, `\\(…\\)`, `\[…\]`, `$$…$$`, `$…$` |
 | **Syntax Highlighting** | Fenced code blocks highlighted with Highlight.js |
 | **Keyboard Shortcuts** | `Ctrl+B`, `Ctrl+I`, `Ctrl+K` in Write mode |
@@ -83,7 +83,7 @@ Click the **Write** tab in the header to switch to a full-screen focused editor.
 
 Click **Download** in the header to open the export menu:
 
-- **PDF** — print-ready A4 document with styled typography. External images are fetched and embedded automatically (with CORS proxy fallback).
+- **PDF** — opens the browser print dialog with a print-styled A4 layout; choose **Save as PDF** as the destination. Text and equations stay selectable and sharp.
 - **Markdown** (`.md`) — raw source as-is.
 - **Plain Text** (`.txt`) — raw source as-is.
 - **HTML Page** (`.html`) — a fully self-contained styled HTML file you can share or host anywhere.
@@ -110,15 +110,9 @@ Standard [CommonMark](https://commonmark.org/) plus GitHub Flavored Markdown (GF
 
 ---
 
-## How Images Work in PDF
+## How PDF Export Works
 
-PDF export uses `html2pdf.js` (which wraps `html2canvas`). Browsers block cross-origin canvas drawing, so a two-stage fetch is used before rendering:
-
-1. **Direct `fetch()`** with CORS mode — works for image hosts that send `Access-Control-Allow-Origin: *`.
-2. **CORS proxy fallback** via `api.allorigins.win` — handles most common CDNs and image hosts.
-3. If both fail, a small warning placeholder replaces the image so the rest of the PDF still generates cleanly.
-
-> **Note:** Some hosts (private servers, strict CDNs) will block both methods. In those cases, download the image and reference it as a base64 data URL or a local file path instead.
+PDF export uses the browser's own print engine (`window.print()`), so there is no PDF library and no image fetching. Images, KaTeX equations and highlighted code print exactly as they appear in the preview, and the file name field is used as the default PDF name.
 
 ---
 
@@ -131,7 +125,6 @@ All loaded from CDN — no `npm install` required.
 | [marked](https://marked.js.org/) | 9.1.6 | Markdown → HTML parser |
 | [highlight.js](https://highlightjs.org/) | 11.9.0 | Syntax highlighting |
 | [KaTeX](https://katex.org/) | 0.16.9 | Math typesetting |
-| [html2pdf.js](https://ekoopmans.github.io/html2pdf.js/) | 0.10.1 | PDF generation |
 | [Google Fonts](https://fonts.google.com/) | — | Source Serif 4, Instrument Sans, JetBrains Mono |
 
 ---
@@ -153,7 +146,6 @@ Everything is self-contained in `index.html`. There are no build tools, no confi
 
 Works in all modern browsers. Requires:
 
-- `fetch()` API (for image embedding in PDF)
 - `FileReader` API (for file upload)
 - CSS custom properties
 

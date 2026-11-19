@@ -22,7 +22,7 @@ const MATH_RE =
 const escapeHtml = (s) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function renderMarkdown(src, forPDF) {
+function renderMarkdown(src) {
   const store = [];
   const tok = (tex, display) => {
     let out;
@@ -31,7 +31,7 @@ function renderMarkdown(src, forPDF) {
         displayMode: display,
         throwOnError: false,
         strict: "ignore",
-        output: forPDF ? "html" : "htmlAndMathml",
+        output: "htmlAndMathml",
       });
     } catch (e) {
       out = `<code class="katex-error">${escapeHtml(tex)}</code>`;
@@ -507,145 +507,32 @@ async function downloadFile(format) {
   showToast(`Downloaded ${fname(format)} ✓`);
 }
 
-// ══ IMAGE → BASE64 ══
-async function fetchImageAsDataURL(url) {
-  if (url.startsWith("data:")) return url;
-  const toB64 = async (u) => {
-    const r = await fetch(u);
-    if (!r.ok) throw 0;
-    const blob = await r.blob();
-    return new Promise((res, rej) => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.onerror = rej;
-      fr.readAsDataURL(blob);
-    });
-  };
-  try {
-    return await toB64(url);
-  } catch (_) {}
-  try {
-    return await toB64(
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
-    );
-  } catch (_) {}
-  return null;
-}
-
-async function imgToDataURL(img) {
-  const src = img.getAttribute("src") || "";
-  if (!src || src.startsWith("data:")) return;
-  const d = await fetchImageAsDataURL(src);
-  if (d) {
-    img.src = d;
-  } else {
-    const ph = document.createElement("div");
-    ph.style.cssText =
-      "background:#f1f4f8;border:1px solid #d8dee8;border-radius:6px;padding:8px 12px;font-size:11px;color:#66718a;font-family:monospace;margin:8px 0;word-break:break-all;";
-    ph.textContent = "⚠ Image not embedded (CORS blocked): " + src;
-    img.replaceWith(ph);
-  }
-}
-
-function applyPDFStyles(el) {
-  el.style.cssText =
-    "font-size:13px;line-height:1.75;color:#172033;max-width:640px;padding:0 8px;";
-  el.querySelectorAll("h1").forEach(
-    (e) =>
-      (e.style.cssText =
-        "font-size:26px;font-weight:700;margin:20px 0 10px;line-height:1.2;font-family:Georgia,serif;"),
-  );
-  el.querySelectorAll("h2").forEach(
-    (e) =>
-      (e.style.cssText =
-        "font-size:20px;font-weight:700;margin:16px 0 8px;font-family:Georgia,serif;"),
-  );
-  el.querySelectorAll("h3").forEach(
-    (e) =>
-      (e.style.cssText = "font-size:16px;font-weight:700;margin:14px 0 6px;"),
-  );
-  el.querySelectorAll("p").forEach((e) => (e.style.marginBottom = "12px"));
-  el.querySelectorAll(":not(pre) > code").forEach(
-    (e) =>
-      (e.style.cssText =
-        "font-family:monospace;font-size:11px;background:#f1f4f8;padding:1px 5px;border-radius:3px;"),
-  );
-  el.querySelectorAll("pre").forEach(
-    (e) =>
-      (e.style.cssText =
-        "background:#0f1420;color:#e3e8f2;padding:12px 14px;border-radius:6px;margin:12px 0;overflow:hidden;"),
-  );
-  el.querySelectorAll("pre code").forEach(
-    (e) =>
-      (e.style.cssText =
-        "font-family:monospace;font-size:11px;color:#e3e8f2;background:none;border:none;padding:0;line-height:1.65;"),
-  );
-  el.querySelectorAll("blockquote").forEach(
-    (e) =>
-      (e.style.cssText =
-        "border-left:3px solid #2a52be;padding:8px 14px;margin:12px 0;color:#66718a;background:#f1f4f8;"),
-  );
-  el.querySelectorAll("table").forEach(
-    (e) =>
-      (e.style.cssText =
-        "width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;"),
-  );
-  el.querySelectorAll("th,td").forEach(
-    (e) =>
-      (e.style.cssText =
-        "padding:6px 10px;border:1px solid #d8dee8;text-align:left;"),
-  );
-  el.querySelectorAll("hr").forEach(
-    (e) =>
-      (e.style.cssText =
-        "border:none;border-top:1px solid #d8dee8;margin:18px 0;"),
-  );
-  el.querySelectorAll("ul,ol").forEach(
-    (e) => (e.style.cssText = "padding-left:20px;margin-bottom:12px;"),
-  );
-  el.querySelectorAll(".math-display").forEach(
-    (e) => (e.style.cssText = "margin:14px 0;text-align:center;overflow:hidden;"),
-  );
-  el.querySelectorAll("img").forEach(
-    (e) =>
-      (e.style.cssText =
-        "max-width:100%;border-radius:6px;margin:10px 0;display:block;"),
-  );
-}
-
+// ══ PDF (browser print) ══
 async function downloadPDF(src) {
-  showToast("Preparing images…");
-  await Promise.all(
-    ["KaTeX_Main", "KaTeX_Math", "KaTeX_Size1", "KaTeX_Size2", "KaTeX_AMS"].map((f) =>
-      document.fonts.load(`16px ${f}`).catch(() => {}),
+  let root = document.getElementById("printRoot");
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "printRoot";
+    root.className = "prose";
+    document.body.appendChild(root);
+  }
+  root.innerHTML = renderMarkdown(src);
+  await Promise.all([
+    document.fonts.ready,
+    ...Array.from(root.querySelectorAll("img")).map((img) =>
+      img.complete ? null : new Promise((r) => (img.onload = img.onerror = r)),
     ),
-  );
-
-  const tmp = document.createElement("div");
-  tmp.innerHTML = renderMarkdown(src, true);
-  tmp.querySelectorAll("pre code").forEach((el) => hljs.highlightElement(el));
-  await Promise.all(Array.from(tmp.querySelectorAll("img")).map(imgToDataURL));
-  applyPDFStyles(tmp);
-  showToast("Generating PDF…");
-
-  html2pdf()
-    .set({
-      margin: [14, 16, 14, 16],
-      filename: fname("pdf"),
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        letterRendering: true,
-        logging: false,
-      },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-    })
-    .from(tmp)
-    .save()
-    .then(() => showToast("PDF downloaded ✓"));
+  ]);
+  const prevTitle = document.title;
+  document.title = fname("pdf").replace(/\.pdf$/, ""); // default file name in "Save as PDF"
+  const restore = () => {
+    document.title = prevTitle;
+    root.innerHTML = "";
+    window.removeEventListener("afterprint", restore);
+  };
+  window.addEventListener("afterprint", restore);
+  showToast("In the print dialog, choose “Save as PDF”");
+  window.print();
 }
 
 function downloadHTML(src) {
