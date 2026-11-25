@@ -34,7 +34,7 @@
       <input type="file" accept=".md,.txt,.markdown,.text" style="display:none" onchange="handleFileInput(event)" />
     </label>
 
-    <button class="btn" onclick="loadSample()">Sample</button>
+    <button class="btn" onclick="loadSample()">Reset</button>
 
     <div class="dropdown" id="dlDropdown">
       <button id="download-btn" class="btn btn-green" onclick="toggleDropdown()"></button>
@@ -58,10 +58,6 @@
         </button>
       </div>
     </div>
-
-    <button class="btn btn-icon" onclick="clearAll()" title="Clear editor">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-    </button>
 
     <!-- ══ THEME TOGGLE ══ -->
     <button class="theme-btn" onclick="toggleTheme()" title="Toggle light / dark mode">
