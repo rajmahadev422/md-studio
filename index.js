@@ -505,6 +505,7 @@ async function downloadFile(format) {
   a.click();
   URL.revokeObjectURL(a.href);
   showToast(`Downloaded ${fname(format)} ✓`);
+  showDownload(download, false);
 }
 
 // ══ PDF (browser print) ══
