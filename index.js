@@ -568,13 +568,6 @@ function loadSample() {
   showToast("Sample loaded ✓");
 }
 
-function clearAll() {
-  document.getElementById("mdInput").value = "";
-  document.getElementById("writeInput").value = "";
-  renderPreview();
-  updateWriteStats();
-}
-
 let tt;
 function showToast(msg) {
   const t = document.getElementById("toast");
